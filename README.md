@@ -24,3 +24,44 @@ Byte-level tokenization offers a unique perspective in the field of natural lang
 - **Byte-Level Tokenization**: Simplifies the tokenization process by focusing on bytes.
 - **End-to-End Training**: Enables seamless end-to-end training of LLMs.
 - **Compatibility**: Can be integrated with existing LLM frameworks.
+
+## How to run
+
+Train
+
+```
+python src/train.py --train_config configs/train.yaml --model_config configs/model_configs/gpt2_small.yaml --use_byte_tokenizer
+```
+
+Test
+
+```
+python src/test.py --test_config configs/test.yaml --model_config configs/model_configs/gpt2_small.yaml --use_byte_tokenizer
+```
+
+## Project 
+
+```
+ByteLLM/
+│
+├── configs/
+│   ├── model_configs/
+│   │   ├── model_a.yaml
+│   │   └── model_b.yaml
+│   ├── train.yaml
+│   └── test.yaml
+│
+├── src/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── custom_models.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   └── byte_tokenizer.py
+│   ├── train.py
+│   └── test.py
+│
+│
+├── requirements.txt
+└── README.md
+```
