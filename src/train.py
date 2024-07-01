@@ -10,6 +10,10 @@ from transformers import (
 from datasets import load_dataset
 from utils.byte_tokenizer import ByteTokenizer
 from transformers import DataCollatorForLanguageModeling
+import datetime
+
+current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+log_dir = f"logs/{current_time}"
 
 
 def load_config(config_path):
@@ -34,16 +38,24 @@ def main(args):
     config = AutoConfig.from_pretrained(
         model_config["config_name"],
         vocab_size=vocab_size,
-        **model_config["config_overrides"]
+        **model_config["config_overrides"],
     )
 
-    # Initialize a new model
-    model = AutoModelForCausalLM.from_config(config)
+    # Initialize model
+    if args.resume_from_checkpoint:
+        print(f"Resuming training from checkpoint: {args.resume_from_checkpoint}")
+        model = AutoModelForCausalLM.from_pretrained(args.resume_from_checkpoint)
+    else:
+        print("Initializing a new model")
+        model = AutoModelForCausalLM.from_config(config)
 
     # Load dataset
     dataset = load_dataset(
         train_config["dataset_name"], train_config["dataset_config_name"]
     )
+    
+    train_dataset = dataset["train"]
+    val_dataset = dataset["validation"]
 
     # Tokenize dataset
     def tokenize_function(examples):
@@ -56,8 +68,10 @@ def main(args):
         inputs["labels"] = inputs["input_ids"].copy()
         return inputs
 
-    tokenized_datasets = dataset.map(tokenize_function, batched=True)
-    
+    tokenized_datasets = {}
+    tokenized_datasets["train"] = train_dataset.map(tokenize_function, batched=True)
+    tokenized_datasets["validation"] = val_dataset.map(tokenize_function, batched=True)
+
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
     # Set up training arguments
@@ -67,7 +81,13 @@ def main(args):
         per_device_train_batch_size=int(train_config["batch_size"]),
         learning_rate=float(train_config["learning_rate"]),
         weight_decay=float(train_config["weight_decay"]),
-        logging_dir=train_config["logging_dir"],
+        logging_dir=log_dir,
+        logging_strategy="steps",
+        logging_steps=500,
+        save_total_limit=3,
+        eval_strategy="steps",
+        eval_steps=500,
+        resume_from_checkpoint=args.resume_from_checkpoint,
     )
 
     # Initialize Trainer
@@ -75,12 +95,13 @@ def main(args):
         model=model,
         args=training_args,
         train_dataset=tokenized_datasets["train"],
+        eval_dataset=tokenized_datasets["validation"],
         tokenizer=tokenizer,
         data_collator=data_collator,
     )
 
     # Train the model
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
     # Save the model
     trainer.save_model(train_config["model_save_path"])
@@ -104,6 +125,12 @@ if __name__ == "__main__":
         "--use_byte_tokenizer",
         action="store_true",
         help="Use byte tokenizer instead of default tokenizer",
+    )
+    parser.add_argument(
+        "--resume_from_checkpoint",
+        type=str,
+        default=None,
+        help="Path to a previously saved checkpoint to resume training from",
     )
     args = parser.parse_args()
     main(args)
