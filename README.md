@@ -33,6 +33,12 @@ Train
 python src/train.py --train_config configs/train.yaml --model_config configs/model_configs/gpt2_small.yaml --use_byte_tokenizer
 ```
 
+Train with checkpoint
+
+```
+python src/train.py --train_config configs/train.yaml --model_config configs/model_configs/gpt2_small.yaml --use_byte_tokenizer --resume_from_checkpoint /path/to/your/checkpoint
+```
+
 Test
 
 ```
