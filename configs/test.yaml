@@ -1,0 +1,5 @@
+model_path: './saved_model'
+dataset_name: 'wikitext'
+dataset_config_name: 'wikitext-103-raw-v1'
+batch_size: 16
+max_length: 128
